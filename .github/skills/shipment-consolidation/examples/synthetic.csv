@@ -1,0 +1,11 @@
+Load,Date,Origin,Destination,OriginCity,DestinationCity,Mode,CostUSD,WeightLB,PickCountry,DropCountry
+SYN001,2026-01-03T08:00:00,SYN_ORIGIN,SYN_DEST,Synthetic Origin,Synthetic Destination,LTL,20,10,DE,DE
+SYN002,2026-01-03T09:00:00,SYN_ORIGIN,SYN_DEST,Synthetic Origin,Synthetic Destination,LTL,12,5,DE,DE
+SYN003,2026-01-06T08:00:00,SYN_ORIGIN,SYN_DEST,Synthetic Origin,Synthetic Destination,LTL,8,2,DE,DE
+SYN004,2026-01-07T08:00:00,SYN_ORIGIN,SYN_DEST,Synthetic Origin,Synthetic Destination,LTL,14,10,DE,DE
+SYN005,2026-01-03T08:00:00,SYN_ORIGIN,SYN_DEST,Synthetic Origin,Synthetic Destination,Parcel,3,1,DE,DE
+SYN006,2026-01-03T09:00:00,SYN_ORIGIN,SYN_DEST,Synthetic Origin,Synthetic Destination,Parcel,4,2,DE,DE
+SYN007,2026-01-06T08:00:00,SYN_ORIGIN,SYN_DEST,Synthetic Origin,Synthetic Destination,Parcel,5,3,DE,DE
+SYN008,2026-01-03T08:00:00,SYN_EXCLUDED_A,SYN_DEST,Synthetic Excluded Site,Synthetic Destination,LTL,100,20,DE,DE
+SYN009,2026-01-03T08:00:00,SYN_ORIGIN,SYN_DEST,Synthetic Origin,Synthetic Destination,LTL,100,20,DE,FR
+SYN010,2026-01-03T10:00:00,SYN_ORIGIN,SYN_DEST,Synthetic Origin,Synthetic Destination,Air,1000,500,DE,DE

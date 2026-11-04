@@ -1,0 +1,36 @@
+# Operational data and generated outputs are never repository content.
+data/
+profiles/
+results/
+outputs/
+runs/
+*.csv
+*.json
+*.html
+*.xlsx
+*.xls
+*.xlsm
+*.parquet
+*.pbix
+*.pbip
+*.tmdl
+*.zip
+*.log
+
+# Only the explicitly reviewed fictional fixtures are tracked.
+!/.github/skills/shipment-consolidation/examples/synthetic.csv
+!/.github/skills/shipment-consolidation/examples/synthetic.json
+!/.github/skills/shipment-consolidation/examples/project-example.json
+
+# Local Python environments, caches and credentials.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.DS_Store
+Thumbs.db

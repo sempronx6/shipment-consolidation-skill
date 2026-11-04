@@ -1,0 +1,56 @@
+{
+  "profile_name": "Fabricated demonstration only - not customer findings",
+  "period": {
+    "start": "2026-01-01",
+    "end": "2026-08-31",
+    "date_field_meaning": "Synthetic shipment ActivityDate",
+    "date_handling": "source_calendar_date_no_timezone_conversion",
+    "partial_month_policy": "require_confirmation"
+  },
+  "columns": {
+    "shipment_id": "Load",
+    "activity_date": "Date",
+    "origin": "Origin",
+    "destination": "Destination",
+    "mode": "Mode",
+    "cost": "CostUSD",
+    "weight": "WeightLB",
+    "origin_city": "OriginCity",
+    "destination_city": "DestinationCity",
+    "origin_country": "PickCountry",
+    "destination_country": "DropCountry"
+  },
+  "units": {"currency": "USD", "weight": "lb"},
+  "geography": {
+    "origin_countries": ["DE"],
+    "destination_countries": ["DE"],
+    "input_is_geography_prefiltered": false
+  },
+  "eligibility": {
+    "excluded_modes": ["Air"],
+    "excluded_modes_rationale": "Fabricated demonstration of mode exclusion; not a universal air-freight rule.",
+    "excluded_sites": {
+      "warehouse_codes": ["SYN_EXCLUDED_A", "SYN_EXCLUDED_B"],
+      "directions": ["origin", "destination"]
+    },
+    "minimum_shipments_per_calendar_month": 0.5
+  },
+  "location_mapping": {
+    "source": "fabricated synthetic shipment city fields",
+    "verification": "Fictional test labels, not verified customer warehouse locations.",
+    "lane_keys": ["origin_warehouse_code", "destination_warehouse_code"]
+  },
+  "scenarios": {
+    "Daily": {
+      "source": "derive",
+      "rule": "legacy_year_day_of_month",
+      "acknowledgement": "Demonstration of cross-month pooling only; not approval for any real analysis."
+    },
+    "TueFri": {"source": "derive", "rule": "saturday_tuesday_wednesday_friday"},
+    "Weekly": {"source": "derive", "rule": "saturday_friday_calendar_year_weeknum"}
+  },
+  "reference_tie_policy": "lowest_rate_among_highest_weight",
+  "ranking": {"scenario": "separate", "metric": "savings_amount", "top_n": 5},
+  "data_quality_policy": "stop_on_invalid_or_duplicate",
+  "coverage_confirmation": "Fabricated fixture with eight deliberate denominator months and shipments only in January; not evidence for a real extract."
+}
