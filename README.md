@@ -26,6 +26,28 @@ The repository root contains contributor guidance, MIT licensing and a synthetic
 A GitHub repository stores and versions these files. A GitHub Projects board is optional and is
 not needed to run or install the skill.
 
+## Team quick start
+
+The shared source is [sempronx6/shipment-consolidation-skill](https://github.com/sempronx6/shipment-consolidation-skill).
+For the project-level team setup, each teammate clones it and opens the repository root in a
+supported Copilot agent environment:
+
+```powershell
+git clone https://github.com/sempronx6/shipment-consolidation-skill.git
+Set-Location shipment-consolidation-skill
+```
+
+The skill is already included under `.github\skills\shipment-consolidation`; no personal
+installation or second copy is needed in this repository. Start a fresh Copilot session and use
+the fabricated demonstration prompt in section 3. Python 3.10+ and local execution permission
+are required. Use `git pull --ff-only` to receive reviewed changes when the checkout is clean;
+if local changes conflict, stop and preserve them rather than forcing an update.
+
+To use the skill inside another team repository, use the project-scope installation in section 3
+after approval from that repository's maintainers. Public read access allows cloning; it does not
+grant write access to this source repository. No collaborator access is created by these steps.
+Keep real client inputs, profiles and generated reports local and outside version control.
+
 ## 1. Check requirements
 
 - Python 3.10 or later; the engine uses only the standard library, so no pip installation is needed.
@@ -105,12 +127,13 @@ directory name, SKILL.md filename and skill support, then restart the session.
 
 ### Reuse in another repository or across personal projects
 
-After the source repository has actually been published, replace `OWNER/REPOSITORY` below.
+The commands below use the published source repository; substitute your own owner/repository
+if you maintain an independent copy.
 Inspect the skill before installing it; installation creates local files and must be approved.
 GitHub CLI skill commands are preview features, so check `gh skill install --help` on your version.
 
 ```powershell
-$Repository = "OWNER/REPOSITORY"
+$Repository = "sempronx6/shipment-consolidation-skill"
 gh skill preview $Repository shipment-consolidation --allow-hidden-dirs
 ```
 
@@ -168,7 +191,9 @@ safety aid, not a guarantee: always review staged files before committing.
 
 ## 5. Create and publish your GitHub repository
 
-These are instructions, not a claim that publication has happened. Before running them, confirm
+The shared source above is already published. These instructions are for maintainers creating
+a separate new repository; do not rerun repository creation for the existing shared source.
+Before running them, confirm
 publication rights, copyright attribution, the exact owner/name and the complete sanitized file list.
 Never upload real shipment records, local profiles, reports, secrets or historical client findings.
 
