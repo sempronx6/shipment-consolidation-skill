@@ -3,10 +3,11 @@
 import argparse
 import csv
 import json
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-from consolidation import AnalysisError
+from consolidation import AnalysisError, expected_key, validate_config
 
 D = Decimal
 
@@ -35,6 +36,7 @@ def main():
         fail(f"Validation output already exists: {args.output}")
     manifest = json.loads((args.run / "manifest.json").read_text(encoding="utf-8"))
     config = manifest["config"]
+    validate_config(config)
     directions = set(config["eligibility"]["excluded_sites"]["directions"])
     sites = set(config["eligibility"]["excluded_sites"]["warehouse_codes"])
     excluded_modes = {mode.strip().casefold() for mode in config["eligibility"]["excluded_modes"]}
@@ -145,6 +147,13 @@ def main():
 
     members_by_batch = {}
     for r in files["members"]:
+        if r["Scenario"] == "Daily":
+            try:
+                day = date.fromisoformat(r["Date"])
+            except ValueError as exc:
+                raise AnalysisError(f"Invalid Daily member date for shipment {r['Load']}.") from exc
+            if r["BatchKey"] != expected_key(day, "calendar_date"):
+                fail(f"Daily batch key must equal the full calendar date for shipment {r['Load']}.")
         key = (r["Scenario"], r["Origin"], r["Destination"], r["Mode"], r["BatchKey"])
         members_by_batch.setdefault(key, []).append(r)
     if len(members_by_batch) != len(files["batches"]):
@@ -170,6 +179,7 @@ def main():
         if abs(actual - expected_estimate - dec(b["SavingsUSD"])) > D("1e-20"):
             fail(f"Batch savings do not reconcile for {key}.")
     checks.append(f"All {len(files['batches'])} batch memberships, highest-weight references and savings reconcile")
+    checks.append("Daily batch keys match full calendar dates; no cross-date pooling")
 
     ranking_scenario = config["ranking"]["scenario"]
     rankings = {}

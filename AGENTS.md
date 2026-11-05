@@ -14,8 +14,9 @@ validation. Update directly related documentation when behavior changes.
 
 Preserve Decimal calculations, warehouse-code lane keys, highest-weight reference selection,
 sequential disjoint exclusions, zero-month eligibility, negative savings and singleton zero
-savings. Do not change business policy to repair implementation defects. Legacy daily keys
-are cross-month pooling and must never be silently replaced or described as true daily.
+savings. Do not change business policy to repair implementation defects. Daily means the full
+calendar date (year-month-date). Reject legacy year-day-of-month rules and stored keys;
+never silently migrate them or pool shipments across different dates in Daily.
 
 Only fictional data and example attestations belong in version control. Do not add client
 records, real profiles, completed reports, credentials or copied customer benchmarks.

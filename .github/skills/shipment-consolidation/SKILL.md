@@ -63,11 +63,11 @@ zero-shipment months in the denominator; one eligible mode cannot rescue another
 
 All three scenarios retain the same eligible shipment baseline and never mix modes:
 
-- Daily: use the explicitly agreed stored/derived rule. `legacy_year_day_of_month` pools the
-  same day number across months and MUST be labeled "stored daily key - NOT true daily
-  consolidation." It requires explicit user approval. The included profiles demonstrate this
-  legacy behavior, not approval for a real analysis. True daily grouping uses
-  `{"source":"derive","rule":"calendar_date"}` in a separately approved profile.
+- Daily: group only by the full calendar date (year-month-date) within each lane-mode.
+  Use `{"source":"derive","rule":"calendar_date"}` or a stored ISO `YYYY-MM-DD` key
+  matching the shipment date. `legacy_year_day_of_month` is unsupported, even with an
+  acknowledgement. Stop on old profiles or stored keys; explicitly update the profile and
+  regenerate full-date keys before rerunning. Never silently migrate cross-month pooling.
 - TueFri: Saturday-Tuesday and Wednesday-Friday.
 - Weekly: Saturday-Friday, with calendar-year week splits rather than ISO week-year rules.
 

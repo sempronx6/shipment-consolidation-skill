@@ -153,11 +153,49 @@ class ConsolidationTests(unittest.TestCase):
             with self.assertRaisesRegex(AnalysisError, "rationale"):
                 load_shipments(path, config)
 
-    def test_legacy_and_calendar_daily_differ(self):
+    def test_daily_keys_include_year_month_and_date(self):
         from datetime import date
-        a, b = date(2026, 1, 14), date(2026, 7, 14)
-        self.assertEqual(expected_key(a, "legacy_year_day_of_month"), expected_key(b, "legacy_year_day_of_month"))
-        self.assertNotEqual(expected_key(a, "calendar_date"), expected_key(b, "calendar_date"))
+        days = (date(2026, 1, 14), date(2026, 7, 14), date(2027, 1, 14), date(2024, 2, 29))
+        self.assertEqual([expected_key(day, "calendar_date") for day in days],
+                         ["2026-01-14", "2026-07-14", "2027-01-14", "2024-02-29"])
+        with self.assertRaisesRegex(AnalysisError, "Unknown batch rule"):
+            expected_key(days[0], "legacy_year_day_of_month")
+
+    def test_daily_consolidates_same_date_without_cross_month_pooling(self):
+        rows = [
+            shipment("heavy", "10", "20", day="2026-01-14"),
+            shipment("light", "5", "12", day="2026-01-14"),
+            shipment("july", "2", "8", day="2026-07-14"),
+        ]
+        result = analyze(rows, profile(), metadata())
+        daily = next(r for r in result["summary"] if r["Scenario"] == "Daily")
+        self.assertEqual(daily["CurrentShipments"], 3)
+        self.assertEqual(daily["ConsolidatedShipments"], 2)
+        self.assertEqual(daily["ActualCostUSD"], D("40"))
+        self.assertEqual(daily["EstimatedCostUSD"], D("38"))
+        self.assertEqual(daily["SavingsUSD"], D("2"))
+        self.assertEqual(daily["CrossMonthBatches"], 0)
+        members = [r for r in result["members"] if r["Scenario"] == "Daily"]
+        self.assertEqual({r["Load"]: r["BatchKey"] for r in members},
+                         {"heavy": "2026-01-14", "light": "2026-01-14", "july": "2026-07-14"})
+
+    def test_daily_same_date_keeps_lane_and_mode_boundaries(self):
+        rows = [
+            shipment("A"), shipment("B"),
+            shipment("mode", mode="Parcel"),
+            shipment("origin", origin="OTHER"),
+            shipment("destination", destination="OTHER"),
+        ]
+        daily = [r for r in analyze(rows, profile(), metadata())["batches"] if r["Scenario"] == "Daily"]
+        self.assertEqual(len(daily), 4)
+        self.assertEqual(sorted(r["OriginalShipments"] for r in daily), [1, 1, 1, 2])
+        self.assertEqual({r["BatchKey"] for r in daily}, {"2026-01-01"})
+
+    def test_analyze_rejects_non_calendar_daily_key(self):
+        row = shipment()
+        row["Daily"] = "2026001"
+        with self.assertRaisesRegex(AnalysisError, "Daily key must equal"):
+            analyze([row], profile(), metadata())
 
     def test_tuesday_friday_boundaries(self):
         from datetime import date
@@ -368,6 +406,18 @@ class ConsolidationTests(unittest.TestCase):
             with self.assertRaisesRegex(AnalysisError, "stored key"):
                 load_shipments(path, config)
 
+    def test_stored_daily_key_matches_full_date_not_timestamp(self):
+        config = profile()
+        config["scenarios"]["Daily"].update(source="column", mapping="daily_key")
+        config["columns"]["daily_key"] = "Daily"
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "input.csv"
+            self.write_input(path, {"Daily": "2026-01-01"})
+            rows, info = load_shipments(path, config)
+            self.assertEqual(rows[0]["Date"], "2026-01-01")
+            self.assertEqual(rows[0]["Daily"], "2026-01-01")
+            self.assertEqual(analyze(rows, config, info)["summary"][0]["SavingsUSD"], 0)
+
     def test_existing_output_refused_and_input_preserved(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -388,14 +438,23 @@ class ConsolidationTests(unittest.TestCase):
         self.assertIn("Daily_SavingsUSD", result["side_by_side"][0])
         self.assertEqual(len(result["selected_modes"]), 3)
 
-    def test_missing_legacy_approval_blocks(self):
-        config = profile()
-        del config["scenarios"]["Daily"]["acknowledgement"]
-        with tempfile.TemporaryDirectory() as temp:
-            path = Path(temp) / "input.csv"
-            self.write_input(path)
-            with self.assertRaisesRegex(AnalysisError, "approval"):
-                load_shipments(path, config)
+    def test_legacy_daily_rule_blocks_even_with_acknowledgement(self):
+        for source in ("derive", "column"):
+            for acknowledgement in (None, "Previously approved legacy behavior"):
+                with self.subTest(source=source, acknowledgement=acknowledgement), tempfile.TemporaryDirectory() as temp:
+                    config = profile()
+                    spec = config["scenarios"]["Daily"]
+                    spec.update(source=source, rule="legacy_year_day_of_month", mapping="daily_key")
+                    config["columns"]["daily_key"] = "Daily"
+                    if acknowledgement:
+                        spec["acknowledgement"] = acknowledgement
+                    path = Path(temp) / "input.csv"
+                    self.write_input(path, {"Daily": "2026001"})
+                    original = path.read_bytes()
+                    with self.assertRaisesRegex(AnalysisError, "Daily requires calendar_date"):
+                        run(path, config, Path(temp) / "result")
+                    self.assertFalse((Path(temp) / "result").exists())
+                    self.assertEqual(path.read_bytes(), original)
 
     def test_period_end_is_inclusive(self):
         config = profile()

@@ -75,6 +75,69 @@ class SavedRunTests(unittest.TestCase):
         self.assertEqual(process.returncode, 0, process.stderr)
         self.assertEqual(json.loads(self.validation.read_text())["status"], "PASS")
         self.assertTrue((self.output / "report.html").is_file())
+        daily = [r for r in self.read_rows("members.csv") if r["Scenario"] == "Daily"]
+        self.assertTrue(all(r["BatchKey"] == r["Date"] for r in daily))
+        self.assertIn("Daily means the full calendar date", (self.output / "report.html").read_text(encoding="utf-8"))
+
+    def test_multi_month_daily_saved_run(self):
+        with (ROOT / "examples" / "synthetic.csv").open(encoding="utf-8", newline="") as f:
+            reader = csv.DictReader(f)
+            fields = reader.fieldnames
+            rows = list(reader)
+        next(r for r in rows if r["Load"] == "SYN003")["Date"] = "2026-07-03T08:00:00"
+        path = self.root / "multi-month.csv"
+        with path.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fields)
+            writer.writeheader()
+            writer.writerows(rows)
+        original = path.read_bytes()
+        run(path, self.config, self.output)
+        self.assertEqual(path.read_bytes(), original)
+        daily = next(r for r in self.read_rows("summary.csv") if r["Scenario"] == "Daily")
+        self.assertEqual(int(daily["ConsolidatedShipments"]), 3)
+        self.assertEqual(Decimal(daily["SavingsUSD"]), Decimal("2"))
+        self.assertEqual(int(daily["CrossMonthBatches"]), 0)
+        members = {r["Load"]: r["BatchKey"] for r in self.read_rows("members.csv") if r["Scenario"] == "Daily"}
+        self.assertEqual(members, {"SYN001": "2026-01-03", "SYN002": "2026-01-03",
+                                   "SYN003": "2026-07-03", "SYN004": "2026-01-07"})
+        process = self.validate()
+        self.assertEqual(process.returncode, 0, process.stderr)
+        self.assertEqual(json.loads(self.validation.read_text())["status"], "PASS")
+
+    def test_legacy_saved_profile_fails(self):
+        self.run_fixture()
+        path = self.output / "manifest.json"
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        manifest["config"]["scenarios"]["Daily"].update(
+            rule="legacy_year_day_of_month", acknowledgement="Previously approved legacy behavior")
+        path.write_text(json.dumps(manifest), encoding="utf-8")
+        process = self.validate()
+        self.assertNotEqual(process.returncode, 0)
+        self.assertIn("Daily requires calendar_date", process.stderr)
+        self.assertFalse(self.validation.exists())
+
+    def test_daily_cross_month_member_fails(self):
+        self.run_fixture()
+        rows = self.read_rows("members.csv")
+        next(r for r in rows if r["Scenario"] == "Daily")["Date"] = "2026-07-03"
+        self.replace_rows("members.csv", rows)
+        process = self.validate()
+        self.assertNotEqual(process.returncode, 0)
+        self.assertIn("Daily batch key must equal", process.stderr)
+        self.assertFalse(self.validation.exists())
+
+    def test_legacy_daily_saved_keys_fail(self):
+        self.run_fixture()
+        for name in ("members.csv", "batches.csv"):
+            rows = self.read_rows(name)
+            for row in rows:
+                if row["Scenario"] == "Daily":
+                    row["BatchKey"] = "202600" + row["BatchKey"][-1]
+            self.replace_rows(name, rows)
+        process = self.validate()
+        self.assertNotEqual(process.returncode, 0)
+        self.assertIn("Daily batch key must equal", process.stderr)
+        self.assertFalse(self.validation.exists())
 
     def test_no_eligible_shipments_is_valid(self):
         self.config["eligibility"]["minimum_shipments_per_calendar_month"] = 999

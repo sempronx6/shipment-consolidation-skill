@@ -22,6 +22,10 @@ Regression checks also cover repeated city observation counts and saved-run vali
 empty opportunities versus missing/inconsistent nonempty rankings. Aggregate mapping counts
 remain authoritative when a verified mapping file is supplied.
 
+Daily regression checks enforce full year-month-date grouping, same-date consolidation,
+separate lane/mode batches, and rejection of legacy profiles (even with acknowledgement) and
+year-day-of-month stored keys. Saved-run validation also checks Daily keys against member dates.
+
 ## Fabricated demonstration
 
 From this skill directory, choose paths that do not already exist:
@@ -54,12 +58,14 @@ Retained actual cost is USD 54.
 
 | Scenario | Consolidated batches | Estimated cost USD | Savings USD |
 |---|---:|---:|---:|
-| Legacy daily key, not true daily | 3 | 52 | 2 |
+| Daily (full calendar date) | 3 | 52 | 2 |
 | Tuesday/Friday | 2 | 48 | 6 |
 | Weekly | 1 | 37.80 | 16.20 |
 
 City-audit endpoint observation counts are SYN_ORIGIN = 8, SYN_DEST = 9 and SYN_EXCLUDED_A = 1.
 These include all scoped records, before mode/site/frequency exclusions, across both endpoint roles.
+All retained fixture shipments are in January, so the daily counts and savings are unchanged
+by the calendar-date policy. Separate multi-month regression cases test cross-month separation.
 
 The integration test independently asserts these fixture expectations and invokes the saved-run
 validator. Both unit tests and the integration tests run through unittest discovery.
@@ -67,7 +73,8 @@ validator. Both unit tests and the integration tests run through unittest discov
 ## Meaning and limits of a pass
 
 The validator reads the saved profile and audit CSVs and checks exclusion counts/costs, lane-mode
-eligibility, city propagation, batch/reference arithmetic and configured top-N ranking.
+eligibility, city propagation, Daily calendar-date key semantics, batch/reference arithmetic and
+configured top-N ranking. Legacy profiles are rejected rather than validated under the new policy.
 An empty opportunity scope is valid only with correspondingly empty lane and ranking outputs.
 Missing or altered nonempty rankings are failures.
 
