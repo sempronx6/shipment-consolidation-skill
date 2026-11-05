@@ -98,7 +98,7 @@ Expected: 10 input records, 1 outside DE-DE geography, 1 excluded mode, 1 exclud
 
 | Scenario | Consolidated batches | Estimated savings USD |
 |---|---:|---:|
-| Legacy daily key, **not true daily consolidation** | 3 | 2.00 |
+| Daily (full calendar date) | 3 | 2.00 |
 | Tuesday/Friday | 2 | 6.00 |
 | Weekly | 1 | 16.20 |
 
@@ -172,13 +172,17 @@ choice and attestation, including dates, excluded modes/sites, threshold, groupi
 ranking and evidence. The engine can validate required text and arithmetic, but cannot prove
 the truth of approval or coverage statements. Do not reuse example attestations as evidence.
 
-Both sample profiles demonstrate legacy daily grouping: the same day number across different
-months may be pooled. Never present it as true daily grouping or silently switch methods.
-For true daily grouping, agree the change and use:
+Daily means the full calendar date (year-month-date) within each lane-mode. Both sample profiles
+use:
 
 ```json
 {"source": "derive", "rule": "calendar_date"}
 ```
+
+The former `legacy_year_day_of_month` rule and year-day-of-month stored keys are unsupported,
+even with an acknowledgement. Existing profiles using them are blocked, not silently migrated.
+Explicitly change the profile to `calendar_date` and regenerate any stored Daily keys as
+ISO `YYYY-MM-DD` from the shipment date before rerunning to a new output directory.
 
 The engine stops on invalid numeric inputs, duplicate scoped IDs, unsupported units, inconsistent
 stored keys and unresolved partial months. Missing/conflicting cities are explicitly flagged

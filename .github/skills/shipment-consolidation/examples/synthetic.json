@@ -43,8 +43,7 @@
   "scenarios": {
     "Daily": {
       "source": "derive",
-      "rule": "legacy_year_day_of_month",
-      "acknowledgement": "Demonstration of cross-month pooling only; not approval for any real analysis."
+      "rule": "calendar_date"
     },
     "TueFri": {"source": "derive", "rule": "saturday_tuesday_wednesday_friday"},
     "Weekly": {"source": "derive", "rule": "saturday_friday_calendar_year_weeknum"}

@@ -18,7 +18,7 @@ Inspect actual metadata and confirm each field before extraction.
 | destination_city | Shipments[DestinationCity] | DestinationCity | City associated with destination warehouse code |
 | origin_country | Shipments[PickupCountry] | PickCountry | Actual pickup country |
 | destination_country | Shipments[DeliveryCountry] | DropCountry | Actual final delivery country |
-| daily_key | Daily_consol | Daily | Confirmed stored daily key |
+| daily_key | Daily_consol | Daily | Full calendar-date key, ISO YYYY-MM-DD |
 | twice_weekly_key | WeeklyTueFri_consol | TueFri | Saturday-Tuesday / Wednesday-Friday key |
 | weekly_key | Weekly_consol | Weekly | Saturday-Friday weekly key |
 
@@ -84,24 +84,27 @@ observed shipment dates.
 Batch identity is `(origin, destination, mode, scenario_key)`. Use structured tuple keys, not
 ambiguous string concatenation.
 
-- **Stored daily key:** `YEAR(ActivityDate)*1000 + DAY(ActivityDate)`. Month is absent.
-  Thus 14 January and 14 July can fall in the same batch. This is NOT true daily consolidation
-  and requires explicit user approval for a real analysis. Both the instruction and report
-  must retain this warning. True calendar-date grouping uses `calendar_date` in a separately
-  approved profile. Neither grouping rule is an implicit default for a new project.
+- **Daily:** the full calendar date (year-month-date), serialized as ISO `YYYY-MM-DD`.
+  Thus 14 January and 14 July always belong to separate batches. Profiles must declare
+  `calendar_date`, either derived from ActivityDate or supplied as a matching full-date key.
+  The former `legacy_year_day_of_month` rule (`YEAR(ActivityDate)*1000 + DAY(ActivityDate)`)
+  omits the month and is unsupported, even with an acknowledgement. Old profiles and stored
+  keys must be explicitly updated and regenerated from full shipment dates before rerunning;
+  they are never silently migrated. Daily batches cannot span different dates.
 - **Tuesday/Friday:** `WEEKNUM(ActivityDate,16)` with Saturday as week start; Saturday-Tuesday
   is Batch1 and Wednesday-Friday is Batch2. Key is
   `(YEAR(ActivityDate)*100 + WEEKNUM(...,16)) & "Batch1/Batch2"`.
 - **Weekly:** the same calendar-year week number, always `"Batch1"`, covering Saturday-Friday.
 
-These are DAX calendar-year week rules, NOT ISO week-year rules. Weeks crossing 1 January are
+Tuesday/Friday and Weekly use DAX calendar-year week rules, NOT ISO week-year rules. Weeks crossing 1 January are
 split by calendar year; this preserves the stored logic. Period-edge batches include only
 in-scope records, never borrow from outside the period. Nonzero time of day does not change
 the calendar-date assignment. Cross-month twice-weekly/weekly batches can be legitimate.
 
 When using supplied keys, the engine compares every scoped row with the declared rule.
 Unexpected keys block execution rather than silently regrouping. Canonical string keys are
-required, for example `202632Batch1`; legacy Daily key `2026014`.
+required, for example Daily `2026-01-14` or Weekly `202632Batch1`. Legacy Daily keys such as
+`2026014` are rejected.
 
 ## Reusable calculations
 
@@ -186,8 +189,8 @@ ranked entries must be described as nonpositive estimates, not savings opportuni
 This is a directional screening estimate. It assumes the selected reference rate applies to
 the full combined weight. It does not confirm carrier acceptance, equipment/cube/weight capacity,
 transit or holding-time feasibility, minimum charges, fixed fees, accessorials, inventory cost,
-receiver constraints or customer commitments. Do not treat arithmetic differences against
-the stored daily key as a service-frequency trade-off. Do not annualize without approval.
+receiver constraints or customer commitments. Scenario differences exclude holding, inventory
+and service costs. Do not annualize without approval.
 
 ## Standard output contract
 

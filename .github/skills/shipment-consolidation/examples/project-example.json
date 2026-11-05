@@ -43,8 +43,7 @@
   "scenarios": {
     "Daily": {
       "source": "derive",
-      "rule": "legacy_year_day_of_month",
-      "acknowledgement": "Fictional legacy-rule example only; obtain explicit approval or select true calendar-date grouping before real use."
+      "rule": "calendar_date"
     },
     "TueFri": {"source": "derive", "rule": "saturday_tuesday_wednesday_friday"},
     "Weekly": {"source": "derive", "rule": "saturday_friday_calendar_year_weeknum"}

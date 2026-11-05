@@ -139,26 +139,26 @@ def validate_config(config):
     require(ranking["metric"] == "savings_amount", "This engine ranks by net estimated savings USD.")
     require(type(ranking["top_n"]) is int and ranking["top_n"] > 0, "top_n must be a positive integer.")
     rules = {
-        "Daily": ("calendar_date", "legacy_year_day_of_month"),
+        "Daily": ("calendar_date",),
         "TueFri": ("saturday_tuesday_wednesday_friday",),
         "Weekly": ("saturday_friday_calendar_year_weeknum",),
     }
     require(set(config["scenarios"]) == set(SCENARIOS), "Exactly Daily, TueFri and Weekly scenarios required.")
     for scenario, spec in config["scenarios"].items():
         require(spec["source"] in ("column", "derive"), f"{scenario}: source must be column or derive.")
+        if scenario == "Daily":
+            require(spec["rule"] == "calendar_date",
+                    "Daily requires calendar_date (year-month-date). Legacy year-day-of-month pooling is unsupported; "
+                    "update the profile and regenerate any stored Daily keys from the full date.")
         require(spec["rule"] in rules[scenario], f"{scenario}: unresolved or unsupported grouping rule.")
         if spec["source"] == "column":
             require(spec.get("mapping") in config["columns"], f"{scenario}: missing key column mapping.")
-        if spec["rule"] == "legacy_year_day_of_month":
-            require(bool(spec.get("acknowledgement")), "Legacy daily cross-month pooling requires explicit approval.")
     return period_info(config["period"])
 
 
 def expected_key(day, rule):
     if rule == "calendar_date":
         return day.isoformat()
-    if rule == "legacy_year_day_of_month":
-        return str(day.year * 1000 + day.day)
     jan1 = date(day.year, 1, 1)
     week = ((day - jan1).days + (jan1.weekday() - 5) % 7) // 7 + 1
     yearweek = day.year * 100 + week
@@ -282,6 +282,7 @@ def rollup(batches, dimensions):
 
 
 def analyze(rows, config, metadata):
+    validate_config(config)
     months = metadata["MonthDenominator"]
     excluded_modes = {mode.strip().casefold() for mode in config["eligibility"]["excluded_modes"]}
     excluded = set(config["eligibility"]["excluded_sites"]["warehouse_codes"])
@@ -340,6 +341,9 @@ def analyze(rows, config, metadata):
     for scenario in SCENARIOS:
         groups = defaultdict(list)
         for r in eligible:
+            if scenario == "Daily":
+                require(r[scenario] == r["Date"],
+                        f"Shipment {r['Load']}: Daily key must equal the full calendar date.")
             groups[r["Origin"], r["Destination"], r["Mode"], r[scenario]].append(r)
         for key, group in sorted(groups.items()):
             b = make_batch(scenario, key, group, config["reference_tie_policy"])
@@ -513,9 +517,7 @@ def report_html(result, config):
     def display(rows):
         return [{k: f"{v:,.2f}" if isinstance(v, D) else ("N/A" if v is None else v) for k, v in r.items()} for r in rows]
 
-    legacy = config["scenarios"]["Daily"]["rule"] == "legacy_year_day_of_month"
-    warning = ("Stored Daily key pools the same day-of-month across months. NOT true daily consolidation; "
-               "scenario differences versus it are arithmetic only.") if legacy else "Daily means the full calendar date."
+    warning = "Daily means the full calendar date (year-month-date); shipments on different dates are never pooled."
     period = config["period"]
     geo = config["geography"]
     eligibility = config["eligibility"]
